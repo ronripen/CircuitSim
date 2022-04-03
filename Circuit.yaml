@@ -1,0 +1,12 @@
+Circuit:
+  - Component:
+      Type: resistor
+      Value: 600
+      leg1: top 34
+      leg2: top 36
+
+  - Component:
+      Type: inductor
+      Value: 0.5
+      leg1: top 36
+      leg2: top 37
