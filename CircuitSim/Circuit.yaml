@@ -1,0 +1,9 @@
+Circuit:
+  - component:
+      type: resistor
+      leg1: bot 0 4
+      leg2: bot 3 4
+  - component:
+      type: inductor
+      leg1: bot 3 4
+      leg2: bot 4 4
