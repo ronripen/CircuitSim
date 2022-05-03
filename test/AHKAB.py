@@ -40,7 +40,7 @@ from ahkab import circuit, printing, time_functions
 
 mycircuit = circuit.Circuit(title="RON EXAMPLE CIRCUT")
 
-voltage_step = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
+# voltage_step = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
 gnd = mycircuit.get_ground_node()
 
 mycircuit.add_resistor('R1', n1='n1', n2='n2', value=1)
