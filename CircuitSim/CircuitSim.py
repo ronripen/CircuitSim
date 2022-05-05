@@ -12,18 +12,30 @@ class Component:
         self.endLeg = endLeg
         self.comName = comName
         self.comValue = self.getValue()
-        self.direction = self.getDirection()
+        self.direction = self.getOrientation()
 
     # determines what is the direction of the component
-    def getDirection(self):
+    def setDirection(self, prev):
+        if self.direction == 'horizontal':
+            if prev.endLeg['x'] < self.endLeg['x']:
+                self.direction = 'right'
+            else:
+                self.direction = 'left'
+        else:
+            if prev.endLeg['y'] < self.startLeg['y']:
+                self.direction = 'down'
+            else:
+                self.direction = 'up'
+
+    # determines what is the orientation of the component
+    def getOrientation(self):
         if self.startLeg == 'PWR':
             return 'down'
         elif self.startLeg == 'GND':
             return 'up'
         elif self.startLeg['y'] == self.endLeg['y']:
-            return 'right'
-        else:
-            return 'down'
+            return 'horizontal'
+        return 'vertical'
 
     # determines the value if a component based on its type
     def getValue(self):
@@ -61,12 +73,15 @@ def yamlToDic():
 
 # disassembles the dictionary into is parts and refactors into object
 def dicToComp(comp):
+    # if leg is PWR or GND
     if isinstance(comp['leg1'], str):
         startLeg = comp['leg1']
         endLeg = comp['leg2']
     elif isinstance(comp['leg2'], str):
         startLeg = comp['leg2']
         endLeg = comp['leg1']
+
+    # if regular leg
     elif comp['leg1']['x'] < comp['leg2']['x']:
         startLeg = comp['leg1']
         endLeg = comp['leg2']
@@ -79,14 +94,12 @@ def dicToComp(comp):
 # prints the given matrix
 def printMat(matrix):
     for line in matrix:
-        print (line)
+        print(line)
 
 
 # ---------------------------SCHAMDRAW---------------------------
 import schemdraw
 import schemdraw.elements as elm
-
-4
 
 
 # inserts component to breadboard in the correct orientation
@@ -117,45 +130,73 @@ def generateBoard(compDic):
         breadboard.append([])
         for x in range(63):
             breadboard[y].append('N')
-    compList = list(compDic.values())
-    for comp in compList:
+    for comp in list(compDic.values()):
         insertComp(comp, breadboard)
 
     # debug ->
-    printMat(breadboard)    # prints the breadboard for debugging purposes
+    printMat(breadboard)  # prints the breadboard for debugging purposes
     return breadboard
 
 
 # parses a component into schemdraw code
 def compToDrawing(comp, prev):
-    if prev.endLeg['y'] > comp.startLeg['y'] and comp.direction == 'down':
-        comp.direction = 'up'
+    # if prev.endLeg['y'] > comp.startLeg['y']:
+    #     comp.direction = 'up'
+    comp.setDirection(prev)
     return eval(f'elm.{comp.comType}().{comp.direction}().label(comp.comName)')
 
 
+## reorders the list of names based on the direction of the component the names represent
+# def reorderNameList(nameList, compDic):
+#     downList = []
+#     rightList = []
+#     for name in nameList:
+#         if name != 'E' and compDic[name].direction == 'down':
+#             downList.append(name)
+#         else:
+#             rightList.append(name)
+#     return downList + rightList
+
+
+# def findBranch(compDic, compName, board):
+#     compList = list(compDic.keys())
+
+
 # draws a circuit from a dictionary of component objects and a metrix
-def createDrawingList(dic, board):
+def createDrawingList(compDic, board):
+    compList = list(compDic.keys())
+    branches = [[]]
+    for name in compList:
+        x = compDic[name].startLeg['x']
+        count = len([board[_][x] for _ in range(5) if board[_][x] != 'N' and board[_][x] != '-'])
+        if count > 2:  # junction
+            branches.append([])
+        branches[-1].append(name)
+    print(branches)
+
     d = [schemdraw.Drawing()]
     tmp = {'type': 'Line', 'name': 'R', 'leg1': {'place': 'bot', 'x': 0, 'y': 0},
            'leg2': {'place': 'bot', 'x': 0, 'y': 0}}
     prev = dicToComp(tmp)
-    for x in range(63):
-        compInX = [board[_][x] for _ in range(5) if
-                   board[_][x] != 'N' and board[_][x] != '-']  # list of all components with in this x
-        count = len(compInX)  # counts how many components in the same x
+    for x in range(63):  # moves along the x-axis
+        # list of all components within this x -->
+        compInX = [board[_][x] for _ in range(5) if board[_][x] != 'N' and board[_][x] != '-']
+        ##compInX = reorderNameList(compInX, compDic)
         for comp in compInX:
+            # dTotal = schemdraw.Drawing()
+            # for _ in d:
+            #     dTotal += elm.ElementDrawing(_)
+            # dTotal.draw()
             if comp != 'E':
-                if count > 2:
-                    d[-1].pop()
+                if len(compInX) > 2:  # if there are 3 component or more, they are part of a junction
                     d.append(schemdraw.Drawing())
-                    if dic[comp].direction == 'right':
-                        d[-1].push()
-                    d[-1] += compToDrawing(dic[comp], prev)
+                    d[-1].push()  # saves the current state
+                    d[-1] += compToDrawing(compDic[comp], prev)
+                    d[-2].pop()  # returns to the last pushed state
                 else:
-                    d[-1] += compToDrawing(dic[comp], prev)
-                    prev = dic[comp]
-                    if dic[comp].direction == 'right':
-                        d[-1].push()
+                    d[-1] += compToDrawing(compDic[comp], prev)
+                    prev = compDic[comp]
+                    d[-1].push()
     return d
 
 
@@ -183,31 +224,57 @@ def legToN(leg):
 
 
 # parses a component into ahkab code
-def compToAhkab(comp, mycircuit):
-    type = comp.comType.lower()
-    if type != 'Line':
+def compToAhkab(comp, myCircuit, GND):
+    comType = comp.comType.lower()
+    if comType == 'line':
+        eval(f'myCircuit.add_resistor("wire", n1="{legToN(comp.startLeg)}", n2="{legToN(comp.endLeg)}", value=1e-12)')
+    else:
         eval(
-            f'mycircuit.add_{type}("{comp.comName}", n1="{legToN(comp.startLeg)}", n2="{legToN(comp.endLeg)}", value={comp.comValue})')
+            f'myCircuit.add_{comType}("{comp.comName}", n1="{legToN(comp.startLeg)}", n2="{legToN(comp.endLeg)}", value={comp.comValue})')
 
 
+# start the circuit simulation
 def startAhkab(compList):
-    mycircuit = circuit.Circuit(title="EXAMPLE CIRCUIT")
+    # builds the circuit
+    myCircuit = circuit.Circuit(title="EXAMPLE CIRCUIT")
+    GND = myCircuit.get_ground_node()
+    voltage_step = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
+    myCircuit.add_vsource("V1", n1=legToN(compList[0].startLeg), n2=GND, dc_value=5, ac_value=1, function=voltage_step)
+
+    # adding components to the circuit
     for comp in compList:
-        compToAhkab(comp, mycircuit)
-    print(mycircuit)
+        compToAhkab(comp, myCircuit, GND)
+    # debug -->
+    print(myCircuit)
+    return myCircuit
+
 
 
 # ---------------------------END OF AHKAB---------------------------
+
+# ---------------------------MATPLOTLIB---------------------------
+import matplotlib.pylab as plt
+import numpy as np
 # TODO: pyserial for communication with Arduino UNO
 
-# begins the process
+# draw a graph for myCircuit
+def drawGraph(myCircuit):
+    # ahkab stuff -->
+    op_analysis = ahkab.new_op()
+    ac_analysis = ahkab.new_ac(start=1e3, stop=1e5, points=100)
+    tran_analysis = ahkab.new_tran(tstart=0, tstop=1.2e-3, tstep=1e-6, x0=None)
+    r = ahkab.run(myCircuit, an_list=[op_analysis, ac_analysis, tran_analysis])
+
+
 def startCircuit():
     # yaml ->
     compDic = yamlToDic()
     # schamdraw ->
     drawCircuit(compDic)
     # ahkab ->
-    startAhkab(list(compDic.values()))
+    myCircuit = startAhkab(list(compDic.values()))
+    # matplotlib ->
+    drawGraph(myCircuit)
 
 
 startCircuit()

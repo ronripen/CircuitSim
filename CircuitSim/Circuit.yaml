@@ -1,60 +1,78 @@
-Circuit: 
+Circuit:
   - component:
-    type: Capacitor
-    name: C5
-    leg1: 
-      place: bot
-      x: 9
-      y: 2
-    leg2: 
-      place: bot
-      x: 11
-      y: 4
-
-  - component:
-    type: Capacitor
-    name: C4
-    leg1: 
+    type: Resistor
+    name: R5
+    leg1:
       place: bot
       x: 6
       y: 2
-    leg2: 
+    leg2:
       place: bot
-      x: 8
-      y: 4
-
+      x: 7
+      y: 3
   - component:
-    type: Inductor
-    name: L3
-    leg1: 
-      place: bot
-      x: 9
-      y: 0
-    leg2: 
-      place: bot
-      x: 6
-      y: 0
-
-  - component:
-    type: Inductor
-    name: L2
-    leg1: 
+    type: Resistor
+    name: R2
+    leg1:
       place: bot
       x: 3
       y: 1
-    leg2: 
+    leg2:
       place: bot
       x: 6
       y: 1
-
+  - component:
+    type: Resistor
+    name: R3
+    leg1:
+      place: bot
+      x: 3
+      y: 2
+    leg2:
+      place: bot
+      x: 4
+      y: 3
+  - component:
+    type: Resistor
+    name: R4
+    leg1:
+      place: bot
+      x: 4
+      y: 4
+    leg2:
+      place: bot
+      x: 7
+      y: 4
   - component:
     type: Resistor
     name: R1
-    leg1: 
+    leg1:
       place: bot
       x: 0
       y: 0
-    leg2: 
+    leg2:
       place: bot
       x: 3
       y: 0
+  - component:
+    type: Resistor
+    name: R6
+    leg1:
+      place: bot
+      x: 6
+      y: 0
+    leg2:
+      place: bot
+      x: 9
+      y: 0
+  - component:
+    type: Line
+    name: BW
+    leg1:
+      place: bot
+      x: 9
+      y: 1
+    leg2:
+      place: bot
+      x: 12
+      y: 1
