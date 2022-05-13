@@ -13,6 +13,7 @@ class Component:
         self.comName = comName
         self.comValue = self.getValue()
         self.direction = self.getOrientation()
+        self.first = True
 
     # determines what is the direction of the component
     def setDirection(self, prev):
@@ -40,11 +41,11 @@ class Component:
     # determines the value if a component based on its type
     def getValue(self):
         if self.comType == 'Resistor':
-            return 500
+            return 700
         elif self.comType == 'Inductor':
-            return 0.5
+            return 0.05
         elif self.comType == 'Capacitor':
-            return 0.5
+            return 1.5e-7
 
     # debug functions
     # prints general information about the current object
@@ -58,8 +59,8 @@ import sys
 import yaml
 
 
+# loads a YAML file
 def yaml_load(filepath):
-    # Loads a YAML file
     with open(filepath, "r") as circuitFile:
         code = yaml.safe_load(circuitFile)
     return code
@@ -67,7 +68,7 @@ def yaml_load(filepath):
 
 # load the yaml file into a dictionary
 def yamlToDic():
-    circuitDic = yaml_load('Circuit.yaml')
+    circuitDic = yaml_load('C:/Users/USER/Desktop/hermelin/Project/PYTHON/CircuitSim/CircuitSim/Circuit.yaml')
     return {dicToComp(component).comName: dicToComp(component) for component in circuitDic['Circuit']}
 
 
@@ -126,15 +127,13 @@ def insertComp(comp, board):
 # generates breadboard
 def generateBoard(compDic):
     breadboard = []
-    for y in range(5):
+    for y in range(10):
         breadboard.append([])
         for x in range(63):
             breadboard[y].append('N')
     for comp in list(compDic.values()):
         insertComp(comp, breadboard)
-
-    # debug ->
-    printMat(breadboard)  # prints the breadboard for debugging purposes
+    # printMat(breadboard)  # prints the breadboard for debugging purposes
     return breadboard
 
 
@@ -146,47 +145,16 @@ def compToDrawing(comp, prev):
     return eval(f'elm.{comp.comType}().{comp.direction}().label(comp.comName)')
 
 
-## reorders the list of names based on the direction of the component the names represent
-# def reorderNameList(nameList, compDic):
-#     downList = []
-#     rightList = []
-#     for name in nameList:
-#         if name != 'E' and compDic[name].direction == 'down':
-#             downList.append(name)
-#         else:
-#             rightList.append(name)
-#     return downList + rightList
-
-
-# def findBranch(compDic, compName, board):
-#     compList = list(compDic.keys())
-
-
 # draws a circuit from a dictionary of component objects and a metrix
 def createDrawingList(compDic, board):
-    compList = list(compDic.keys())
-    branches = [[]]
-    for name in compList:
-        x = compDic[name].startLeg['x']
-        count = len([board[_][x] for _ in range(5) if board[_][x] != 'N' and board[_][x] != '-'])
-        if count > 2:  # junction
-            branches.append([])
-        branches[-1].append(name)
-    print(branches)
-
     d = [schemdraw.Drawing()]
     tmp = {'type': 'Line', 'name': 'R', 'leg1': {'place': 'bot', 'x': 0, 'y': 0},
            'leg2': {'place': 'bot', 'x': 0, 'y': 0}}
     prev = dicToComp(tmp)
     for x in range(63):  # moves along the x-axis
         # list of all components within this x -->
-        compInX = [board[_][x] for _ in range(5) if board[_][x] != 'N' and board[_][x] != '-']
-        ##compInX = reorderNameList(compInX, compDic)
+        compInX = [board[_][x] for _ in range(10) if board[_][x] != 'N' and board[_][x] != '-']
         for comp in compInX:
-            # dTotal = schemdraw.Drawing()
-            # for _ in d:
-            #     dTotal += elm.ElementDrawing(_)
-            # dTotal.draw()
             if comp != 'E':
                 if len(compInX) > 2:  # if there are 3 component or more, they are part of a junction
                     d.append(schemdraw.Drawing())
@@ -198,6 +166,7 @@ def createDrawingList(compDic, board):
                     prev = compDic[comp]
                     d[-1].push()
     return d
+
 
 
 # draws a circuit from a list of schemdraw drawings
@@ -216,8 +185,9 @@ import ahkab
 from ahkab import circuit, printing, time_functions
 
 
+# returns a representation of the leg placement on the board
 def legToN(leg):
-    if leg == 'GND':
+    if leg == 'GND' or leg == 'PWR':
         return leg
     Component.legCount += 1
     return f"n{leg['x']}"
@@ -226,28 +196,36 @@ def legToN(leg):
 # parses a component into ahkab code
 def compToAhkab(comp, myCircuit, GND):
     comType = comp.comType.lower()
+    n1 = legToN(comp.startLeg)
+    n2 = legToN(comp.endLeg)
+
+    if comp.first:
+        comp.first = False
+        Vin = f'V{n1}'
+    Vout = f'V{n1}'
+
     if comType == 'line':
-        eval(f'myCircuit.add_resistor("wire", n1="{legToN(comp.startLeg)}", n2="{legToN(comp.endLeg)}", value=1e-12)')
+        eval(f'myCircuit.add_resistor("wire", n1="{n1}", n2="{n2}", value=1e-9)')
     else:
-        eval(
-            f'myCircuit.add_{comType}("{comp.comName}", n1="{legToN(comp.startLeg)}", n2="{legToN(comp.endLeg)}", value={comp.comValue})')
+        eval(f'myCircuit.add_{comType}("{comp.comName}", n1="{n1}", n2="{n2}", value={comp.comValue})')
+    return Vin, Vout
 
 
 # start the circuit simulation
 def startAhkab(compList):
     # builds the circuit
-    myCircuit = circuit.Circuit(title="EXAMPLE CIRCUIT")
+    myCircuit = circuit.Circuit(title="Example Circuit")
     GND = myCircuit.get_ground_node()
-    voltage_step = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
-    myCircuit.add_vsource("V1", n1=legToN(compList[0].startLeg), n2=GND, dc_value=5, ac_value=1, function=voltage_step)
+    PWR = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
+    myCircuit.add_vsource("V1", n1=legToN(compList[0].startLeg), n2=GND, dc_value=5, ac_value=1, function=PWR)
+    print(myCircuit)
 
     # adding components to the circuit
     for comp in compList:
-        compToAhkab(comp, myCircuit, GND)
+        Vin, Vout = compToAhkab(comp, myCircuit, GND)
     # debug -->
     print(myCircuit)
-    return myCircuit
-
+    return Vin, Vout, myCircuit
 
 
 # ---------------------------END OF AHKAB---------------------------
@@ -255,15 +233,50 @@ def startAhkab(compList):
 # ---------------------------MATPLOTLIB---------------------------
 import matplotlib.pylab as plt
 import numpy as np
-# TODO: pyserial for communication with Arduino UNO
+
 
 # draw a graph for myCircuit
-def drawGraph(myCircuit):
+def drawGraph(Vin, Vout, myCircuit):
     # ahkab stuff -->
-    op_analysis = ahkab.new_op()
-    ac_analysis = ahkab.new_ac(start=1e3, stop=1e5, points=100)
-    tran_analysis = ahkab.new_tran(tstart=0, tstop=1.2e-3, tstep=1e-6, x0=None)
-    r = ahkab.run(myCircuit, an_list=[op_analysis, ac_analysis, tran_analysis])
+    # op_analysis = ahkab.new_op()
+    # ac_analysis = ahkab.new_ac(start=1e3, stop=1e5, points=100)
+    tran_analysis = ahkab.new_tran(tstart=0, tstop=5, tstep=1e-2, x0=None)
+    r = ahkab.run(myCircuit, an_list=[tran_analysis])
+
+    fig = plt.figure()
+    plt.title(f'{myCircuit.title} Simulation')
+    plt.plot()
+    plt.plot(r['tran']['T'], r['tran'][Vin], label="Input voltage")
+    plt.plot(r['tran']['T'], r['tran'][Vout], label="output voltage")
+    plt.legend()
+    plt.grid(True)
+    plt.ylim([-5, 5])
+    plt.xlim([0, 5])
+    plt.ylabel('Step response')
+    plt.xlabel('Time [s]')
+    plt.show()
+
+
+# ---------------------------END OF MATPLOTLIB---------------------------
+
+# # ---------------------------PYSERIAL---------------------------
+# import serial
+# import time
+# # arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
+#
+#
+# # sends serial output to Arduino
+# def serialWrite(x):
+#     arduino.write(bytes(x, 'utf-8'))
+#     time.sleep(0.1)
+#
+#
+# # starts the communication process to the Arduino
+# def startSerialCom(Vout):
+#     arduino.cancel_write()
+#
+#
+# # ---------------------------END OF PYSERIAL---------------------------
 
 
 def startCircuit():
@@ -272,9 +285,14 @@ def startCircuit():
     # schamdraw ->
     drawCircuit(compDic)
     # ahkab ->
-    myCircuit = startAhkab(list(compDic.values()))
+    Vin, Vout, myCircuit = startAhkab(list(compDic.values()))
     # matplotlib ->
-    drawGraph(myCircuit)
+    drawGraph(Vin, Vout, myCircuit)
+    # pyserial ->
+    # startSerialCom('ABCDEFG')
+    Vout = 3.456
+    return f'V={Vout}V'
 
+def result():
+    return startCircuit()
 
-startCircuit()
