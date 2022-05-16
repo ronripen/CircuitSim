@@ -1,25 +1,7 @@
 Circuit: 
   - component:
     type: Line
-    name: BW20
-    leg1: GND
-    leg2: 
-      place: bot
-      x: 15
-      y: 9
-
-  - component:
-    type: Line
-    name: BW3
-    leg1: 
-      place: bot
-      x: 12
-      y: 9
-    leg2: GND
-
-  - component:
-    type: Line
-    name: BW2
+    name: BW22
     leg1: 
       place: bot
       x: 9
@@ -27,8 +9,26 @@ Circuit:
     leg2: GND
 
   - component:
+    type: Line
+    name: BW3
+    leg1: GND
+    leg2: 
+      place: bot
+      x: 12
+      y: 9
+
+  - component:
+    type: Line
+    name: BW2
+    leg1: GND
+    leg2: 
+      place: bot
+      x: 15
+      y: 9
+
+  - component:
     type: Resistor
-    name: R7
+    name: R6
     leg1: 
       place: bot
       x: 15
@@ -37,18 +37,6 @@ Circuit:
       place: top
       x: 14
       y: 4
-
-  - component:
-    type: Line
-    name: BW1
-    leg1: 
-      place: top
-      x: 11
-      y: 0
-    leg2: 
-      place: top
-      x: 14
-      y: 0
 
   - component:
     type: Capacitor
@@ -66,17 +54,29 @@ Circuit:
     type: Capacitor
     name: C5
     leg1: 
-      place: top
-      x: 8
-      y: 4
-    leg2: 
       place: bot
       x: 9
       y: 5
+    leg2: 
+      place: top
+      x: 8
+      y: 4
+
+  - component:
+    type: Line
+    name: BW1
+    leg1: 
+      place: top
+      x: 14
+      y: 0
+    leg2: 
+      place: top
+      x: 11
+      y: 0
 
   - component:
     type: Inductor
-    name: L3
+    name: L2
     leg1: 
       place: top
       x: 8
@@ -88,7 +88,7 @@ Circuit:
 
   - component:
     type: Inductor
-    name: L2
+    name: L3
     leg1: 
       place: top
       x: 8

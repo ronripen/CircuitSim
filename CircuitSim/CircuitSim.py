@@ -92,7 +92,7 @@ def dicToComp(comp):
     return Component(comp['type'], startLeg, endLeg, comp['name'])
 
 
-# prints the given matrix
+# prints the given matrix debug function
 def printMat(matrix):
     for line in matrix:
         print(line)
@@ -147,7 +147,28 @@ def compToDrawing(comp, prev):
 
 # draws a circuit from a dictionary of component objects and a metrix
 def createDrawingList(compDic, board):
+    # schemdraw still not complete, temporary solution for the test on the 23.5.22
     d = [schemdraw.Drawing()]
+    # d[-1] += elm.Source().up()
+    # d[-1] += elm.Resistor().right().label('R1')
+    # d[-1] += elm.Inductor().right().label('L2')
+    # d[-1].push()
+    # d[-1] += elm.Capacitor().down().label('C4')
+    # d[-1].pop()
+    # d.append(schemdraw.Drawing())
+    # d[-1] += elm.Inductor().right().label('L3')
+    # d[-1].push()
+    # d[-1] += elm.Capacitor().down().label('C5')
+    # d[-1].pop()
+    # d.append(schemdraw.Drawing())
+    # d[-1] += elm.Line().right()
+    # d[-1] += elm.Resistor().down().label('R6')
+    # d[-1] += elm.Line().left()
+    # d[-1] += elm.Line().left()
+    # d[-1] += elm.Line().left()
+    # d[-1] += elm.Line().left()
+    # return d
+
     tmp = {'type': 'Line', 'name': 'R', 'leg1': {'place': 'bot', 'x': 0, 'y': 0},
            'leg2': {'place': 'bot', 'x': 0, 'y': 0}}
     prev = dicToComp(tmp)
@@ -166,7 +187,6 @@ def createDrawingList(compDic, board):
                     prev = compDic[comp]
                     d[-1].push()
     return d
-
 
 
 # draws a circuit from a list of schemdraw drawings
@@ -190,7 +210,7 @@ def legToN(leg):
     if leg == 'GND' or leg == 'PWR':
         return leg
     Component.legCount += 1
-    return f"n{leg['x']}"
+    return f"N{leg['x']}"
 
 
 # parses a component into ahkab code
@@ -199,84 +219,80 @@ def compToAhkab(comp, myCircuit, GND):
     n1 = legToN(comp.startLeg)
     n2 = legToN(comp.endLeg)
 
-    if comp.first:
-        comp.first = False
-        Vin = f'V{n1}'
-    Vout = f'V{n1}'
+    # to add a diode to a circuit ->
+    # myCircuit.add_model('diode', 'Diode', dict(IS=1e-14, N=1, ISR=0, NR=2, RS=0))
+    # f'myCircuit.add_diode("D{comp.comName}", n1="{n1}", n2="{n2}", model_label="Diode")'
+
+    # if leg is a GND then it is not a string
+    strN = 'n1='
+    if n1 == 'GND':
+        strN += f'{n1}, n2="{n2}"'
+    elif n2 == 'GND':
+        strN += f'"{n1}", n2={n2}'
+    else:
+        strN += f'"{n1}", n2="{n2}"'
 
     if comType == 'line':
-        eval(f'myCircuit.add_resistor("wire", n1="{n1}", n2="{n2}", value=1e-9)')
+        # if the component is a wire, it is implemented as a resistor with extremely low resistance
+        tmp = f'myCircuit.add_resistor("Wire", {strN}, value=1e-9)'
+        eval(tmp)
     else:
-        eval(f'myCircuit.add_{comType}("{comp.comName}", n1="{n1}", n2="{n2}", value={comp.comValue})')
-    return Vin, Vout
+        tmp = f'myCircuit.add_{comType}("{comp.comName}", {strN}, value={comp.comValue})'
+        eval(tmp)
 
 
 # start the circuit simulation
 def startAhkab(compList):
     # builds the circuit
-    myCircuit = circuit.Circuit(title="Example Circuit")
+    myCircuit = circuit.Circuit(title="My Circuit")
     GND = myCircuit.get_ground_node()
-    PWR = time_functions.pulse(v1=0, v2=1, td=500e-9, tr=1e-12, pw=1, tf=1e-12, per=2)
-    myCircuit.add_vsource("V1", n1=legToN(compList[0].startLeg), n2=GND, dc_value=5, ac_value=1, function=PWR)
-    print(myCircuit)
+    PWR = time_functions.pulse(v1=0, v2=5, td=500e-9, tr=1e-11, pw=1, tf=1e-11, per=2)
+    myCircuit.add_vsource("V1", n1='PWR', n2=GND, dc_value=5, ac_value=1, function=PWR)
 
     # adding components to the circuit
+    NVout = 'NV0'
     for comp in compList:
-        Vin, Vout = compToAhkab(comp, myCircuit, GND)
+        tmp = f'V{legToN(comp.startLeg)}'
+        if tmp[2::].isdigit() and int(tmp[2::]) > int(NVout[2::]):
+            NVout = tmp
+        compToAhkab(comp, myCircuit, GND)
     # debug -->
-    print(myCircuit)
-    return Vin, Vout, myCircuit
+    # print(myCircuit)
+    return NVout, myCircuit
 
 
 # ---------------------------END OF AHKAB---------------------------
 
 # ---------------------------MATPLOTLIB---------------------------
+# TODO: needs some work
 import matplotlib.pylab as plt
 import numpy as np
 
 
 # draw a graph for myCircuit
-def drawGraph(Vin, Vout, myCircuit):
+def drawGraph(NVout, myCircuit):
     # ahkab stuff -->
     # op_analysis = ahkab.new_op()
     # ac_analysis = ahkab.new_ac(start=1e3, stop=1e5, points=100)
-    tran_analysis = ahkab.new_tran(tstart=0, tstop=5, tstep=1e-2, x0=None)
+    tran_analysis = ahkab.new_tran(tstart=0, tstop=1.2e-3, tstep=1e-6, x0=None)
     r = ahkab.run(myCircuit, an_list=[tran_analysis])
 
     fig = plt.figure()
-    plt.title(f'{myCircuit.title} Simulation')
-    plt.plot()
-    plt.plot(r['tran']['T'], r['tran'][Vin], label="Input voltage")
-    plt.plot(r['tran']['T'], r['tran'][Vout], label="output voltage")
+    plt.title(myCircuit.title + " - TRAN Simulation")
+    plt.plot(r['tran']['T'], r['tran']['VPWR'], label="Input voltage")
+    plt.plot(r['tran']['T'], r['tran'][NVout], label="output voltage")
     plt.legend()
     plt.grid(True)
-    plt.ylim([-5, 5])
-    plt.xlim([0, 5])
-    plt.ylabel('Step response')
+    plt.ylim([0, 6])
+    plt.ylabel('Amplitude [V]')
     plt.xlabel('Time [s]')
+    fig.savefig("C:/Users/USER/Desktop/hermelin/Project/UNITY/VRlab/VRlab/Assets/image results/tran_plot.png")
     plt.show()
+    Vout = r['tran'][NVout][-1]
+    return Vout
 
 
 # ---------------------------END OF MATPLOTLIB---------------------------
-
-# # ---------------------------PYSERIAL---------------------------
-# import serial
-# import time
-# # arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
-#
-#
-# # sends serial output to Arduino
-# def serialWrite(x):
-#     arduino.write(bytes(x, 'utf-8'))
-#     time.sleep(0.1)
-#
-#
-# # starts the communication process to the Arduino
-# def startSerialCom(Vout):
-#     arduino.cancel_write()
-#
-#
-# # ---------------------------END OF PYSERIAL---------------------------
 
 
 def startCircuit():
@@ -285,14 +301,12 @@ def startCircuit():
     # schamdraw ->
     drawCircuit(compDic)
     # ahkab ->
-    Vin, Vout, myCircuit = startAhkab(list(compDic.values()))
+    NVout, myCircuit = startAhkab(list(compDic.values()))
     # matplotlib ->
-    drawGraph(Vin, Vout, myCircuit)
-    # pyserial ->
-    # startSerialCom('ABCDEFG')
-    Vout = 3.456
+    Vout = str(drawGraph(NVout, myCircuit))[0:5]
+    # the string displayed on the screen ->
     return f'V={Vout}V'
+
 
 def result():
     return startCircuit()
-
