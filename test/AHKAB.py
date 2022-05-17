@@ -38,3 +38,31 @@ r = ahkab.run(mycircuit, an_list=[tran_analysis])
 Vout = 'VN14'
 print(r['tran'][Vout][-1])
 print(r['tran']['VPWR'])
+
+# schemdraw still not complete, temporary solution for the test on the 23.5.22
+import schemdraw
+import schemdraw.elements as elm
+d = [schemdraw.Drawing()]
+d[-1] += elm.Source().up()
+d[-1] += elm.Resistor().right().label('R1')
+d[-1] += elm.Inductor().right().label('L2')
+d[-1].push()
+d[-1] += elm.Capacitor().down().label('C4')
+d[-1].pop()
+d.append(schemdraw.Drawing())
+d[-1] += elm.Inductor().right().label('L3')
+d[-1].push()
+d[-1] += elm.Capacitor().down().label('C5')
+d[-1].pop()
+d.append(schemdraw.Drawing())
+d[-1] += elm.Line().right()
+d[-1] += elm.Resistor().down().label('R6')
+d[-1] += elm.Line().left()
+d[-1] += elm.Line().left()
+d[-1] += elm.Line().left()
+d[-1] += elm.Line().left()
+
+dTotal = schemdraw.Drawing()
+for _ in d:
+    dTotal += elm.ElementDrawing(_)
+dTotal.draw()

@@ -1,10 +1,10 @@
-Circuit: 
+Circuit:
   - component:
     type: Line
-    name: BW22
-    leg1: 
+    name: BW24
+    leg1:
       place: bot
-      x: 9
+      x: 15
       y: 9
     leg2: GND
 
@@ -12,7 +12,7 @@ Circuit:
     type: Line
     name: BW3
     leg1: GND
-    leg2: 
+    leg2:
       place: bot
       x: 12
       y: 9
@@ -20,101 +20,101 @@ Circuit:
   - component:
     type: Line
     name: BW2
-    leg1: GND
-    leg2: 
+    leg1:
       place: bot
-      x: 15
+      x: 9
       y: 9
-
-  - component:
-    type: Resistor
-    name: R6
-    leg1: 
-      place: bot
-      x: 15
-      y: 5
-    leg2: 
-      place: top
-      x: 14
-      y: 4
+    leg2: GND
 
   - component:
     type: Capacitor
-    name: C4
-    leg1: 
+    name: C8
+    leg1:
+      place: top
+      x: 8
+      y: 4
+    leg2:
+      place: bot
+      x: 9
+      y: 5
+
+  - component:
+    type: Capacitor
+    name: C7
+    leg1:
       place: bot
       x: 12
       y: 5
-    leg2: 
+    leg2:
       place: top
       x: 11
       y: 4
 
   - component:
-    type: Capacitor
-    name: C5
-    leg1: 
+    type: Resistor
+    name: R6
+    leg1:
       place: bot
-      x: 9
+      x: 15
       y: 5
-    leg2: 
+    leg2:
       place: top
-      x: 8
+      x: 14
       y: 4
 
   - component:
     type: Line
     name: BW1
-    leg1: 
-      place: top
-      x: 14
-      y: 0
-    leg2: 
+    leg1:
       place: top
       x: 11
       y: 0
+    leg2:
+      place: top
+      x: 14
+      y: 0
+
+  - component:
+    type: Inductor
+    name: L4
+    leg1:
+      place: top
+      x: 8
+      y: 1
+    leg2:
+      place: top
+      x: 11
+      y: 1
 
   - component:
     type: Inductor
     name: L2
-    leg1: 
-      place: top
-      x: 8
-      y: 1
-    leg2: 
-      place: top
-      x: 11
-      y: 1
-
-  - component:
-    type: Inductor
-    name: L3
-    leg1: 
-      place: top
-      x: 8
-      y: 0
-    leg2: 
+    leg1:
       place: top
       x: 5
+      y: 0
+    leg2:
+      place: top
+      x: 8
       y: 0
 
   - component:
     type: Resistor
     name: R1
-    leg1: 
-      place: top
-      x: 5
-      y: 1
-    leg2: 
+    leg1:
       place: top
       x: 2
+      y: 1
+    leg2:
+      place: top
+      x: 5
       y: 1
 
   - component:
     type: Line
     name: BW
     leg1: PWR
-    leg2: 
+    leg2:
       place: top
       x: 2
       y: 0

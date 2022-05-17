@@ -133,7 +133,8 @@ def generateBoard(compDic):
             breadboard[y].append('N')
     for comp in list(compDic.values()):
         insertComp(comp, breadboard)
-    # printMat(breadboard)  # prints the breadboard for debugging purposes
+    # debug ->
+    printMat(breadboard)
     return breadboard
 
 
@@ -145,53 +146,66 @@ def compToDrawing(comp, prev):
     return eval(f'elm.{comp.comType}().{comp.direction}().label(comp.comName)')
 
 
+# reorders the list so the components that go down are drawn first
+def downFirst(nameList, compDic):
+    endList = []
+    downList = []
+    rightList = []
+    for name in nameList:
+        if name != 'E':
+            if compDic[name].direction == 'vertical':
+                downList.append(name)
+            else:
+                rightList.append(name)
+        else:
+            endList.append(name)
+    return endList + downList + rightList
+
+
+# def findBranch(compDic, compName, board):
+#     compList = list(compDic.keys())
+
+
 # draws a circuit from a dictionary of component objects and a metrix
-def createDrawingList(compDic, board):
-    # schemdraw still not complete, temporary solution for the test on the 23.5.22
-    d = [schemdraw.Drawing()]
-    # d[-1] += elm.Source().up()
-    # d[-1] += elm.Resistor().right().label('R1')
-    # d[-1] += elm.Inductor().right().label('L2')
-    # d[-1].push()
-    # d[-1] += elm.Capacitor().down().label('C4')
-    # d[-1].pop()
-    # d.append(schemdraw.Drawing())
-    # d[-1] += elm.Inductor().right().label('L3')
-    # d[-1].push()
-    # d[-1] += elm.Capacitor().down().label('C5')
-    # d[-1].pop()
-    # d.append(schemdraw.Drawing())
-    # d[-1] += elm.Line().right()
-    # d[-1] += elm.Resistor().down().label('R6')
-    # d[-1] += elm.Line().left()
-    # d[-1] += elm.Line().left()
-    # d[-1] += elm.Line().left()
-    # d[-1] += elm.Line().left()
-    # return d
+def createDrawingList(compDic, compList, board, d):
 
     tmp = {'type': 'Line', 'name': 'R', 'leg1': {'place': 'bot', 'x': 0, 'y': 0},
            'leg2': {'place': 'bot', 'x': 0, 'y': 0}}
     prev = dicToComp(tmp)
+
     for x in range(63):  # moves along the x-axis
         # list of all components within this x -->
-        compInX = [board[_][x] for _ in range(10) if board[_][x] != 'N' and board[_][x] != '-']
+        tmp = [board[_][x] for _ in range(10) if board[_][x] != 'N' and board[_][x] != '-']
+        compInX = downFirst(tmp, compDic)
         for comp in compInX:
             if comp != 'E':
                 if len(compInX) > 2:  # if there are 3 component or more, they are part of a junction
                     d.append(schemdraw.Drawing())
+                    # d [-1] += drawBranch(x, board, compDic)
                     d[-1].push()  # saves the current state
                     d[-1] += compToDrawing(compDic[comp], prev)
-                    d[-2].pop()  # returns to the last pushed state
+                    if compInX[-1] != comp:
+                        d[-1].pop()  # returns to the last pushed state
                 else:
                     d[-1] += compToDrawing(compDic[comp], prev)
                     prev = compDic[comp]
                     d[-1].push()
-    return d
+
+                # debug ->
+                # tmpDebug(d)
 
 
 # draws a circuit from a list of schemdraw drawings
 def drawCircuit(compDic):
-    d = createDrawingList(compDic, generateBoard(compDic))
+    d = [schemdraw.Drawing()]
+    createDrawingList(compDic, list(compDic.keys()), generateBoard(compDic), d)
+    dTotal = schemdraw.Drawing()
+    for _ in d:
+        dTotal += elm.ElementDrawing(_)
+    dTotal.draw()
+
+
+def tmpDebug(d):
     dTotal = schemdraw.Drawing()
     for _ in d:
         dTotal += elm.ElementDrawing(_)
@@ -298,10 +312,10 @@ def drawGraph(NVout, myCircuit):
 def startCircuit():
     # yaml ->
     compDic = yamlToDic()
-    # schamdraw ->
-    drawCircuit(compDic)
     # ahkab ->
     NVout, myCircuit = startAhkab(list(compDic.values()))
+    # schamdraw ->
+    drawCircuit(compDic)
     # matplotlib ->
     Vout = str(drawGraph(NVout, myCircuit))[0:5]
     # the string displayed on the screen ->
